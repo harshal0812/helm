@@ -187,6 +187,152 @@
     11. helm list 
     
     12. helm delete RELEASE_NAME
+
+
+
+##  Using helm Template Functions and Pipe operator 
+
+    1.  Template functions are used to transform the supplied data from Values.yaml and make it more usable 
+    
+    2.  cp -R nginxdemo3  nginxdemo4
+    
+    3.  Add the below entry inside nginxdemo4/values.yaml
+        
+        nginxname: nginx
+
+    3.  cd nginxdemo4/templates
+    
+    4.  Modify the below in nginx-deployment.yaml - 
+    
+            - name: nginx   to   - name: {{ quote .Values.nginxname }}
+            
+    5.  helm install --debug --dry-run nginxdemo4
+        
+        Observations: 
+        
+            - name: "nginx"   ----  quotes added 
+    
+    6.  Modify the below in nginx-deployment.yaml -
+    
+            - name: {{ quote .Values.nginxname }}    to   - name: {{  .Values.nginxname | upper | quote }}
+            
+    7.  helm install --debug --dry-run nginxdemo4
+    
+        Observations:
+            
+            - name: "NGINX"
+            
+    8.  Modify the below in nginx-deployment.yaml -
+    
+            - name: {{  .Values.nginxname | upper | quote }}  to   - name: {{  .Values.nginxname | upper | repeat 5 | quote }}
+            
+    9.  helm install --debug --dry-run nginxdemo4
+    
+            Observations:
+            
+            - name: "NGINXNGINXNGINXNGINXNGINX"
+            
+    9.  Modify the below in nginx-deployment.yaml -
+    
+            image: {{ .Values.nginximage }}    to    image: {{ .Values.nginximageNOTEXISTING | default "nginx:1.15.8" | quote }}
+            
+    10. helm install --debug --dry-run nginxdemo4
+    
+            Observations:
+            
+            image: "nginx:1.15.8"
+            
+
+##  Control Structures and Loops 
+
+    1.  cp -R nginxdemo4 nginxdemo5
+    
+    2.  Edit values.yaml file as below - 
+    
+        nginximage: nginx:latest 
+        
+                    TO
+        
+        nginximagename: nginx
+        nginximagetag: latest
+        
+    3.  Modify - nginxdemo5/templates/nginx-deployment.yaml as below 
+    
+            image: {{ .Values.nginximageNOTEXISTING | default "nginx:1.15.8" | quote }}
+            
+                                    TO
+                                    
+            image: {{ .Values.nginximagename }}:{{ .Values.nginximagetag }} 
+            
+    4.  helm install --debug --dry-run nginxdemo5
+    
+        Observations:
+            
+                    image: nginx:latest
+
+    
+    5.  Modify values.yaml as below 
+    
+            nginximagetag: latest  to  nginximagetag: 1.15.4
+    
+    5.  Modify - nginxdemo5/templates/nginx-deployment.yaml as below 
+    
+            image: {{ .Values.nginximagename }}:{{ .Values.nginximagetag }} 
+            
+                                    TO
+                                    
+            {{ if eq .Values.nginximagename "1.15.8" }}
+            image: {{ .Values.nginximagename }}:{{ .Values.nginximagetag }}
+            {{ else }}
+            image: nginx:latest
+            {{ end }}
+    
+    6.  helm install --debug --dry-run nginxdemo5
+    
+        Observations: 
+            
+            image: nginx:latest
+            
+    7.  Add below list to values.yaml
+    
+            deploymentlabels:
+              - app: frontend
+              - tier: webtier
+              - application: nginx
+              
+    8.  Modify - nginxdemo5/templates/nginx-deployment.yaml as below
+            
+            metadata:
+              name: nginx
+              
+              
+                                 TO
+                                 
+            metadata:
+              name: nginx
+              labels:
+                {{- range $key, $val := .Values.deploymentlabels }}
+                {{ $key }}: {{ $val | quote }}
+                {{- end }}
+
+    9.  helm install --debug --dry-run nginxdemo5
+    
+        Observations:
+        
+            metadata:
+              name: nginx
+              labels:
+                app: "frontend"
+                application: "nginx"
+                tier: "webtier"
+
+              
+
+
+
+         
+    
+        
     
     
 
